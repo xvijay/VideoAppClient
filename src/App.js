@@ -7,13 +7,17 @@ import React, { useEffect, useRef, useState } from "react";
 import { CopyToClipboard } from "react-copy-to-clipboard";
 import Peer from "simple-peer";
 import io from "socket.io-client";
-import "./App.css";
+import "./App.scss";
+
+import Video from "./Pages/Video";
+import Call from "./Pages/call";
 
 const socket = io.connect("https://video-server-app-1.herokuapp.com/");
 function App() {
   const [me, setMe] = useState("");
   const [stream, setStream] = useState();
   const [receivingCall, setReceivingCall] = useState(false);
+  const [calling, setCalling] = useState(false);
   const [caller, setCaller] = useState("");
   const [callerSignal, setCallerSignal] = useState();
   const [callAccepted, setCallAccepted] = useState(false);
@@ -25,7 +29,6 @@ function App() {
   const connectionRef = useRef();
 
   useEffect(() => {
-    console.log("Loaded");
     navigator.mediaDevices
       .getUserMedia({ video: true, audio: true })
       .then((stream) => {
@@ -38,7 +41,6 @@ function App() {
     });
 
     socket.on("callUser", (data) => {
-      console.log("receving");
       setReceivingCall(true);
       setCaller(data.from);
       setName(data.name);
@@ -47,7 +49,7 @@ function App() {
   }, []);
 
   const callUser = (id) => {
-    console.log("calling USer");
+    setCalling(true);
     const peer = new Peer({
       initiator: true,
       trickle: false,
@@ -65,7 +67,6 @@ function App() {
       userVideo.current.srcObject = stream;
     });
     socket.on("callAccepted", (signal) => {
-      console.log("stream is coming");
       setCallAccepted(true);
       peer.signal(signal);
     });
@@ -74,7 +75,6 @@ function App() {
   };
 
   const answerCall = () => {
-    console.log("call answered");
     setCallAccepted(true);
     const peer = new Peer({
       initiator: false,
@@ -93,92 +93,46 @@ function App() {
   };
 
   const leaveCall = () => {
+    console.log("here");
     setCallEnded(true);
     connectionRef.current.destroy();
   };
-
   return (
-    <>
-      <h1 style={{ textAlign: "center", color: "#fff" }}>Zoomish</h1>
-      <div className="container">
-        <div className="video-container">
-          <div className="video">
-            {stream && (
-              <video
-                playsInline
-                muted
-                ref={myVideo}
-                autoPlay
-                style={{ width: "300px" }}
-              />
-            )}
-          </div>
-          <div className="video">
-            {callAccepted && !callEnded ? (
-              <video
-                playsInline
-                ref={userVideo}
-                autoPlay
-                style={{ width: "300px" }}
-              />
-            ) : null}
-          </div>
-        </div>
-        <div className="myId">
-          <TextField
-            id="filled-basic"
-            label="Name"
-            variant="filled"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            style={{ marginBottom: "20px" }}
-          />
-          <CopyToClipboard text={me} style={{ marginBottom: "2rem" }}>
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={<AssignmentIcon fontSize="large" />}
-            >
-              Copy ID
-            </Button>
-          </CopyToClipboard>
-
-          <TextField
-            id="filled-basic"
-            label="ID to call"
-            variant="filled"
-            value={idToCall}
-            onChange={(e) => setIdToCall(e.target.value)}
-          />
-          <div className="call-button">
-            {callAccepted && !callEnded ? (
-              <Button variant="contained" color="secondary" onClick={leaveCall}>
-                End Call
-              </Button>
-            ) : (
-              <IconButton
-                color="primary"
-                aria-label="call"
-                onClick={() => callUser(idToCall)}
-              >
-                <PhoneIcon fontSize="large" />
-              </IconButton>
-            )}
-            {idToCall}
-          </div>
-        </div>
-        <div>
-          {receivingCall && !callAccepted ? (
-            <div className="caller">
-              <h1>{name} is calling...</h1>
-              <Button variant="contained" color="primary" onClick={answerCall}>
-                Answer
-              </Button>
+    <React.Fragment>
+      <div className="va">
+        <div className="va__container">
+          <div className="va__container__video">
+            <div className="va__container__video__main">
+              <Video
+                myVideo={myVideo}
+                stream={stream}
+                callEnded={callEnded}
+                callAccepted={callAccepted}
+                userVideo={userVideo}
+              ></Video>
             </div>
-          ) : null}
+            <div className="va__container__video__control">contols here</div>
+          </div>
+          <div className="va__container__call">
+            <Call
+              name={name}
+              me={me}
+              idToCall={idToCall}
+              setIdToCall={setIdToCall}
+              setName={setName}
+              callUser={callUser}
+              calling={calling}
+              callEnded={callEnded}
+              callAccepted={callAccepted}
+              receivingCall={receivingCall}
+              callAccepted={callAccepted}
+              answerCall={answerCall}
+              leaveCall={leaveCall}
+            ></Call>
+          </div>
         </div>
       </div>
-    </>
+    </React.Fragment>
   );
 }
 
